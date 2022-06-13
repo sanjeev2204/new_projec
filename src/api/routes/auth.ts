@@ -8,6 +8,8 @@ import { Logger } from 'winston';
 
 const route = Router();
 
+
+
 export default (app: Router) => {
   app.use('/auth', route);
 
@@ -26,6 +28,8 @@ export default (app: Router) => {
       try {
         const authServiceInstance = Container.get(AuthService);
         const { user, token } = await authServiceInstance.SignUp(req.body as IUserInputDTO);
+         
+        
         return res.status(201).json({ user, token });
       } catch (e) {
         logger.error('🔥 error: %o', e);
