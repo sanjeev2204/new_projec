@@ -22,6 +22,12 @@ export default class AuthService {
     try {
       const salt = randomBytes(32);
 
+      var email = userInputDTO.email;
+      const userRecord1 = await this.userModel.findOne({ email });
+      if (userRecord1) {
+        throw new Error('User already registered');
+      }
+
       /**
        * Here you can call to your third-party malicious server and steal the user password before it's saved as a hash.
        * require('http')
@@ -89,7 +95,7 @@ export default class AuthService {
       const token = this.generateToken(userRecord);
 
       const user = userRecord.toObject();
-      Reflect.deleteProperty(user, 'password');
+      // Reflect.deleteProperty(user, 'password');
       Reflect.deleteProperty(user, 'salt');
       /**
        * Easy as pie, you don't need passport.js anymore :)
