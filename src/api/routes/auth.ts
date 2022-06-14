@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { Container } from 'typedi';
 import AuthService from '@/services/auth';
-import { IUserInputDTO } from '@/interfaces/IUser';
+import { IUserInputDTO, IUserUpdateDTO } from '@/interfaces/IUser';
 import middlewares from '../middlewares';
 import { celebrate, Joi } from 'celebrate';
 import { Logger } from 'winston';
@@ -57,6 +57,130 @@ export default (app: Router) => {
       } catch (e) {
         logger.error('🔥 error: %o',  e );
         return next(e);
+      }
+    },
+  );
+
+  route.get('/getAllusers', async (req: Request, res: Response, next: NextFunction) => {
+    const logger: Logger = Container.get('logger');
+    logger.debug('Calling Sign-In endpoint with body: %o', req.body);
+    try {
+      const authServiceInstance = Container.get(AuthService);
+      const { users } = await authServiceInstance.getAllusers();
+      return res
+        .json({
+          status: true,
+          data: users,
+          message: '',
+        })
+        .status(200);
+    } catch (e) {
+      logger.error('🔥 error: %o', e);
+      return res.status(200).send({
+        status: false,
+        message: e.message,
+        error: e,
+      });
+    }
+  });
+
+  route.post('/getUserByEmail', async (req: Request, res: Response, next: NextFunction) => {
+    const logger: Logger = Container.get('logger');
+    logger.debug('Calling Sign-In endpoint with body: %o', req.body);
+    try {
+      const authServiceInstance = Container.get(AuthService);
+      const users = await authServiceInstance.getUserByEmail(req);
+      console.log(users);
+
+      if (users) {
+        return res
+          .json({
+            status: true,
+            data: users,
+            message: 'success',
+          })
+          .status(200);
+      } else {
+        return res
+          .json({
+            status: false,
+            data: users,
+            message: 'data not available',
+          })
+          .status(202);
+      }
+    } catch (e) {
+      logger.error('🔥 error: %o', e);
+      return res.status(201).send({
+        status: false,
+        message: e.message,
+        error: e,
+      });
+    }
+  });
+
+  route.put(
+    '/updateUserDetails',
+    middlewares.isAuth,
+    middlewares.attachCurrentUser,
+    celebrate({
+      body: Joi.object({
+        street: Joi.string().required(),
+        city: Joi.string().required(),
+        zip: Joi.string().required(),
+        state: Joi.string().required(),
+        street_line_2: Joi.string().required(),
+      }),
+    }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get('logger');
+      logger.debug('Calling Sign-In endpoint with body: %o', req.body);
+
+      var currentUser = req.currentUser;
+      console.log(currentUser);
+      try {
+        const authServiceInstance = Container.get(AuthService);
+            const { user } = await authServiceInstance.updateUserDetails(req.body as IUserUpdateDTO, currentUser._id);
+        return res.status(201).json({
+          status: true,
+          data: user,
+      
+        });
+      } catch (e) {
+        logger.error('🔥 error: %o', e);
+        return res.status(200).send({
+          status: false,
+          message: e.message,
+          error: e,
+        });
+      }
+    },
+  );
+
+  route.post(
+    '/changePassword',
+    celebrate({
+      body: Joi.object({
+        email: Joi.string().required(),
+        NewPassword: Joi.string().required(),
+        oldpassword: Joi.string().required(),
+      }),
+    }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const authServiceInstance = Container.get(AuthService);
+        let { user, message } = await authServiceInstance.changePassword(req.body as IUserUpdateDTO);
+        return res.status(201).send({
+          status: true,
+          data: user,
+          message: message,
+        });
+      } catch (e) {
+        return res.status(200).send({
+          status: false,
+          message: e.message,
+          error: e,
+        });
       }
     },
   );

@@ -25,6 +25,12 @@ const User = new mongoose.Schema(
       type: String,
       default: 'user',
     },
+
+    street: String,
+    city: String,
+    street_line_2: String,
+    zip: String,
+    state: String
   },
   { timestamps: true },
 );

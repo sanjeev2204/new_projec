@@ -4,9 +4,11 @@ import MailerService from './mailer';
 import config from '@/config';
 import argon2 from 'argon2';
 import { randomBytes } from 'crypto';
-import { IUser, IUserInputDTO } from '@/interfaces/IUser';
+import { IUser, IUserInputDTO, IUserUpdateDTO } from '@/interfaces/IUser';
 import { EventDispatcher, EventDispatcherInterface } from '@/decorators/eventDispatcher';
 import events from '@/subscribers/events';
+import { Request } from 'express';
+import { ObjectId } from 'mongoose';
 
 @Service()
 export default class AuthService {
@@ -131,4 +133,84 @@ export default class AuthService {
       config.jwtSecret
     );
   }
+
+  public async getAllusers(): Promise<{ users: any }> {
+    const userRecord = await this.userModel.find();
+    if (!userRecord) {
+      throw new Error('no userRecord added');
+    }
+    /**
+     * We use verify from argon2 to prevent 'timing based' attacks
+     */
+
+    const users = userRecord;
+    return { users };
+  }
+
+  public async getUserByEmail(req: Request): Promise<{ users: any }> {
+   
+    const userRecord = await this.userModel.findOne({ email: req.body.email });
+    const users:any = userRecord;
+    if (!userRecord) {
+      // throw new Error('no userRecord added');
+      return users
+    }
+    /**
+     * We use verify from argon2 to prevent 'timing based' attacks
+     */
+
+    return { users };
+  }
+
+  public async updateUserDetails(userUpdateDTO: IUserUpdateDTO, userId: ObjectId): Promise<{ user: IUser }> {
+    try {
+      const userRecord1 = await this.userModel.findByIdAndUpdate(userId, {
+        street_line_2: userUpdateDTO.street_line_2,
+        street: userUpdateDTO.street,
+        city: userUpdateDTO.city,
+        zip: userUpdateDTO.zip,
+        state: userUpdateDTO.state,
+        new: true,
+      });
+
+      const userRecord = await this.userModel.findOne({ _id: userId });
+      const user = userRecord.toObject();
+
+      return { user };
+    } catch (e) {
+      this.logger.error(e);
+      throw e;
+    }
+  }
+
+  public async changePassword(req: IUserUpdateDTO): Promise<{ user: IUser; message: string }> {
+    try {
+      let email = req.email;
+      const userRecord1 = await this.userModel.findOne({ email });
+      const salt = randomBytes(32);
+      const hashedPassword = await argon2.hash(req.NewPassword, { salt });
+      if (userRecord1) {
+        let NewPassword = req.NewPassword;
+        let oldpassword = req.oldpassword;
+
+        let validpass = await argon2.verify(userRecord1.password, oldpassword);
+        if (!validpass) {
+          throw new Error('old password does not match');
+        }
+        await this.userModel.findOne({ email: email }).update({ password: hashedPassword, salt: salt.toString('hex') });
+        let userRecord = await this.userModel.findOne({ email });
+
+        const user = userRecord.toObject();
+        Reflect.deleteProperty(user, 'password');
+        Reflect.deleteProperty(user, 'salt');
+        return { user, message: 'password change successfully' };
+      } else {
+        throw new Error('User does not exist');
+      }
+    } catch (e) {
+      this.logger.error(e);
+      throw e;
+    }
+  }
+
 }
