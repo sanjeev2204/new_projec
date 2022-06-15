@@ -30,8 +30,9 @@ export interface IUserUpdateDTO {
   street_line_2: string;
   zip: string;
   state: string;
-  
+
   email: string;
   oldpassword: string;
   NewPassword: string;
+  confirmNewPassword:string
 }

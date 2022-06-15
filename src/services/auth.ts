@@ -213,4 +213,34 @@ export default class AuthService {
     }
   }
 
+  public async resetPassword(req: IUserUpdateDTO): Promise<{ user: IUser; message: string }> {
+    try {
+      let email = req.email;
+      const userRecord1 = await this.userModel.findOne({ email });
+      const salt = randomBytes(32);
+      const hashedPassword = await argon2.hash(req.NewPassword, { salt });
+      if (userRecord1) {
+        let NewPassword = req.NewPassword;
+        let confirmNewPassword = req.confirmNewPassword;
+
+        // let validpass = await argon2.verify(userRecord1.password, oldpassword);
+        if (NewPassword !== confirmNewPassword) {
+          throw new Error('new password and confirm new password does not match');
+        }
+        await this.userModel.findOne({ email: email }).update({ password: hashedPassword, salt: salt.toString('hex') });
+        let userRecord = await this.userModel.findOne({ email });
+
+        const user = userRecord.toObject();
+        Reflect.deleteProperty(user, 'password');
+        Reflect.deleteProperty(user, 'salt');
+        return { user, message: 'password reset successfully' };
+      } else {
+        throw new Error('User does not exist');
+      }
+    } catch (e) {
+      this.logger.error(e);
+      throw e;
+    }
+  }
+
 }

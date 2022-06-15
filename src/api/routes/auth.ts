@@ -185,6 +185,34 @@ export default (app: Router) => {
     },
   );
 
+  route.post(
+    '/resetPassword',
+    celebrate({
+      body: Joi.object({
+        email: Joi.string().required(),
+        NewPassword: Joi.string().required(),
+        confirmNewPassword: Joi.string().required(),
+      }),
+    }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const authServiceInstance = Container.get(AuthService);
+        let { user, message } = await authServiceInstance.resetPassword(req.body as IUserUpdateDTO);
+        return res.status(201).send({
+          status: true,
+          data: user,
+          message: message,
+        });
+      } catch (e) {
+        return res.status(200).send({
+          status: false,
+          message: e.message,
+          error: e,
+        });
+      }
+    },
+  );
+
   /**
    * @TODO Let's leave this as a place holder for now
    * The reason for a logout route could be deleting a 'push notification token'

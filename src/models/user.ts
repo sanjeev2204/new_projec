@@ -30,7 +30,11 @@ const User = new mongoose.Schema(
     city: String,
     street_line_2: String,
     zip: String,
-    state: String
+    state: String,
+
+    NewPassword:String,
+    confirmNewPassword:String,
+
   },
   { timestamps: true },
 );
